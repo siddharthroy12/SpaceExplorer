@@ -1,7 +1,8 @@
 #include "../libs/raylib/src/raylib.h"
 #include "helper.hpp"
+#include "Game.hpp"
 
-Texture2D texture;
+Game *game;
 
 void loop() {
 #if defined(PLATFORM_WEB)
@@ -11,25 +12,12 @@ void loop() {
     int h = getWindowHeight();
     if(w!=old_w || h!=old_h){ SetWindowSize(w,h); }
 #endif
-
-    BeginDrawing();
-
-    ClearBackground(RAYWHITE);
-
-    const int texture_x = getWindowWidth() / 2 - texture.width / 2;
-    const int texture_y = getWindowHeight()/ 2 - texture.height / 2;
-    DrawTexture(texture, texture_x, texture_y, WHITE);
-
-    const char* text = "OMG! IT WORKS!";
-    const Vector2 text_size = MeasureTextEx(GetFontDefault(), text, 20, 1);
-    DrawText(text, getWindowWidth() / 2.0 - text_size.x / 2, texture_y + texture.height + text_size.y + 10, 20, BLACK);
-
-    EndDrawing();
-
+    game->loop();
 }
 
 int main(void) {
     // Setup window
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
 #if defined(PLATFORM_WEB)
     InitWindow(getBrowserWindowWidth(), getBrowserWindowHeight(), PROJECT_NAME);
 #else
@@ -37,18 +25,20 @@ int main(void) {
 #endif
     SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
 
-    // Setup assets
-    texture = LoadTexture("assets/test.png");
+    SetExitKey(0);
+
+    game = new Game();
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(loop, 0, 1);
 #else
-    while (!WindowShouldClose()) {
+    while (game->running && !WindowShouldClose()) {
         loop();
     }
 #endif
 
     // Cleanup
+    delete game;
     CloseWindow();
     return 0;
 }
