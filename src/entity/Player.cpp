@@ -11,8 +11,9 @@ void Player::_update() {
     Vector2 playerToMouse = Vector2Subtract(mousePositionInWorld, this->position);
 
     if (IsKeyDown(KEY_W)) {
-        this->velocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), GetFrameTime()));
+        this->velocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), GetFrameTime()*50));
     }
+
 }
 
 void Player::_draw() {
@@ -22,6 +23,7 @@ void Player::_draw() {
 
     float rotation = Vector2Angle({0, 0}, playerToMouse);
 
+    DrawCircleV(this->position, 30, {BLUE.r, BLUE.g, BLUE.b, 50});
     DrawTexturePro(
         this->context->context->asset.playerShipTexture,
         {

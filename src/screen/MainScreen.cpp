@@ -18,6 +18,10 @@ void MainScreen::loop() {
     centerOfScreen.x = getWindowWidth() / 2.0;
     centerOfScreen.y = getWindowHeight() / 2.0;
 
+    BeginDrawing();
+    ClearBackground({18, 18, 18, 255});
+
+
     // Draw Background
     Rectangle source = { 0, 0, (float)this->context->asset.titleBackgorund.width, (float)this->context->asset.titleBackgorund.height };
     float aspectRatio = source.width/source.height;
@@ -63,6 +67,8 @@ void MainScreen::loop() {
     if (button(context, "Exit", buttonPosition, buttonSize)) {
         this->context->running = false;
     }
+
+    EndDrawing();
 }
 
 MainScreen::~MainScreen() {

@@ -21,13 +21,8 @@ void Game::loop() {
     }
     this->ui.mouseOnClickable = false;
 
-    // Begin Drawing
-    BeginDrawing();
-    ClearBackground({18, 18, 18, 255});
-
     // Run the current screen loop
     this->currentScreen->loop();
-    EndDrawing();
 
     // Handle the change of screen
     if (this->screenNeedsToChange) {
