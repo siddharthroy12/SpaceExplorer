@@ -6,6 +6,29 @@
 #include <vector>
 
 #define LAYER_2_CHUNK_SIZE 500
+#define WORLD_SiZE 10000
+
+Vector2 worldToMap(Vector2 objectPosition, Vector2 playerPosition, bool center) {
+    int miniMapSize = (!center) ? MINIMAP_EXPAND_SIZE : MINIMAP_SIZE;
+    Rectangle miniMapRectange = {
+        (float)(getWindowWidth() - (miniMapSize+10)),
+        (float)(10),
+        (float)(miniMapSize),
+        (float)(miniMapSize),
+    };
+
+    Vector2 centerOfMiniMap = {miniMapRectange.x + miniMapRectange.width/2, miniMapRectange.y + miniMapRectange.height/2};
+
+    Vector2 objectPositionInMap = Vector2Add(centerOfMiniMap,Vector2Multiply(Vector2Divide(objectPosition, {WORLD_SiZE, WORLD_SiZE}), {MINIMAP_EXPAND_SIZE, MINIMAP_EXPAND_SIZE}));
+
+    if (center) {
+        Vector2 playerPositionInMap = Vector2Add(centerOfMiniMap,Vector2Multiply(Vector2Divide(playerPosition, {WORLD_SiZE, WORLD_SiZE}), {MINIMAP_EXPAND_SIZE, MINIMAP_EXPAND_SIZE}));
+        Vector2 centerToPlayer = Vector2Subtract(centerOfMiniMap, playerPositionInMap);
+        objectPositionInMap = Vector2Add(objectPositionInMap, centerToPlayer);
+    }
+
+    return objectPositionInMap;
+}
 
 RenderTexture generateBackgroundTextureChunk(int x, int y, int seed) {
     srand(seed + x + y);
@@ -30,17 +53,24 @@ SpaceScreen::SpaceScreen(Game* context) : Screen(context) {
     // Setup camera
     this->camera.target = {0, 0};
     this->camera.offset = {(float)getWindowWidth()/2, (float)getWindowHeight()/2};
-    this->camera.zoom = 1.2;
+    this->camera.zoom = 1.3;
     this->camera.rotation = 0;
-
+    DisableCursor();
 }
 
 void SpaceScreen::loop() {
     // Update
+
+    if (IsKeyPressed(KEY_TAB)) {
+        this->miniMapExpand = !this->miniMapExpand;
+    }
+
+    // This fixes camera's aspect ratio when the window is resized
     this->camera.offset = {(float)getWindowWidth()/2, (float)getWindowHeight()/2};
+
     // Make camera follow player
     float cameraSpeed = GetFrameTime() * 6;
-    this->camera.target = Vector2Add(this->player->position, Vector2Scale(this->player->velocity, 1));
+    this->camera.target = Vector2Add(this->player->position, Vector2Scale(this->player->velocity, 0.3));
 
     player->update();
 
@@ -100,6 +130,9 @@ void SpaceScreen::loop() {
 
     // ---- LAYER 1 ----
 
+    // Draw boundry
+    DrawRectangleLines(-(WORLD_SiZE/2), -(WORLD_SiZE/2), WORLD_SiZE, WORLD_SiZE, WHITE);
+
     // Draw Planet
     DrawTexture(this->context->asset.planetEarth, 0, 0, WHITE);
 
@@ -109,9 +142,81 @@ void SpaceScreen::loop() {
     EndMode2D();
 
     // Draw UI
-    int miniMapSize = 200;
-    DrawRectangle(getWindowWidth() - (miniMapSize+10), 10, miniMapSize, miniMapSize, {18, 18, 18, 255});
-    DrawRectangleLines(getWindowWidth() - (miniMapSize+10), 10, miniMapSize, miniMapSize, WHITE);
+    // Draw MiniMap
+    int miniMapSize = this->miniMapExpand ? MINIMAP_EXPAND_SIZE : MINIMAP_SIZE;
+    Rectangle miniMapRectange = {
+        (float)(getWindowWidth() - (miniMapSize+10)),
+        (float)(10),
+        (float)(miniMapSize),
+        (float)(miniMapSize),
+    };
+    Vector2 centerOfMiniMap = {miniMapRectange.x + miniMapRectange.width/2, miniMapRectange.y + miniMapRectange.height/2};
+
+    // Draw border and background of map
+    DrawRectangleRec(miniMapRectange, {33, 33, 33, 255});
+    DrawRectangleLinesEx(miniMapRectange, 1, WHITE);
+
+    // Draw Inside map
+    BeginScissorMode(miniMapRectange.x, miniMapRectange.y, miniMapRectange.width, miniMapRectange.height);
+
+    // Draw Player
+    Vector2 playerPositionInMap = worldToMap(this->player->position, this->player->position, !this->miniMapExpand);
+    Vector2 mousePositionInWorld = GetScreenToWorld2D(GetMousePosition(), this->camera);
+
+    Vector2 playerToMouse = Vector2Subtract(this->player->position, mousePositionInWorld);
+
+    float rotation = Vector2Angle({0, 0}, playerToMouse);
+
+    DrawTexturePro(
+        this->context->asset.minimapPlayer,
+        {
+            .x = 0,
+            .y = 0,
+            .width = (float)this->context->asset.minimapPlayer.width,
+            .height = (float)this->context->asset.minimapPlayer.height
+        },
+        {
+            .x = playerPositionInMap.x,
+            .y = playerPositionInMap.y,
+            .width = (float)this->context->asset.minimapPlayer.width,
+            .height = (float)this->context->asset.minimapPlayer.height,
+        },
+        {
+            (float)this->context->asset.minimapPlayer.width/2,
+            (float)this->context->asset.minimapPlayer.height/2
+        },
+        (rotation*RAD2DEG) - 90.0f,
+        WHITE
+    );
+
+
+    Vector2 planetPosition = worldToMap({0, 0}, this->player->position, !this->miniMapExpand);
+    DrawCircleV(planetPosition, 5, GRAY);
+
+    EndScissorMode();
+
+    // Draw cursor
+    DrawTexturePro(
+        this->context->asset.cursor,
+        {
+            .x = 0,
+            .y = 0,
+            .width = (float)this->context->asset.cursor.width,
+            .height = (float)this->context->asset.cursor.height
+        },
+        {
+            .x = GetMousePosition().x,
+            .y = GetMousePosition().y,
+            .width = (float)this->context->asset.cursor.width,
+            .height = (float)this->context->asset.cursor.height,
+        },
+        {
+            (float)this->context->asset.cursor.width/2,
+            (float)this->context->asset.cursor.height/2
+        },
+        (rotation*RAD2DEG) - 90.0f,
+        WHITE
+    );
 
     EndDrawing();
 }

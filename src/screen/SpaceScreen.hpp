@@ -5,6 +5,9 @@
 #include <unordered_map>
 #include "string"
 
+#define MINIMAP_SIZE 200
+#define MINIMAP_EXPAND_SIZE 500
+
 class SpaceScreen : public Screen {
 public:
     SpaceScreen(Game* context);
@@ -16,6 +19,7 @@ public:
 private:
     RenderTexture background;
     std::unordered_map<std::string, RenderTexture> backgrounds;
+    bool miniMapExpand = false;
 };
 
 #endif

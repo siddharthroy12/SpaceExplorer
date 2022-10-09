@@ -19,7 +19,7 @@ public:
     float angularVelocity = 0;
 protected:
     SpaceScreen* context;
-    float velocityLimit = 200;
+    float velocityLimit = 500;
 };
 
 #endif

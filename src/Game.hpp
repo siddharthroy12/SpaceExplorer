@@ -9,6 +9,8 @@ struct Asset {
     Texture titleBackgorund;
     Texture playerShipTexture;
     Texture planetEarth;
+    Texture minimapPlayer;
+    Texture cursor;
 };
 
 struct UI {

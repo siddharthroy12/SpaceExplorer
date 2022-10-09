@@ -11,7 +11,7 @@ void Player::_update() {
     Vector2 playerToMouse = Vector2Subtract(mousePositionInWorld, this->position);
 
     if (IsKeyDown(KEY_W)) {
-        this->velocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), GetFrameTime()*50));
+        this->velocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), GetFrameTime()*500));
     }
 
 }
