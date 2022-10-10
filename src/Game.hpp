@@ -11,6 +11,8 @@ struct Asset {
     Texture planetEarth;
     Texture minimapPlayer;
     Texture cursor;
+    Texture astroids;
+    Texture bullets;
 };
 
 struct UI {

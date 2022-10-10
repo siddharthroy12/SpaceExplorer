@@ -10,6 +10,8 @@ Game::Game() {
     this->asset.planetEarth = LoadTexture("assets/earth.png");
     this->asset.minimapPlayer = LoadTexture("assets/minimap_player.png");
     this->asset.cursor = LoadTexture("assets/cursor.png");
+    this->asset.astroids = LoadTexture("assets/astroids.png");
+    this->asset.bullets = LoadTexture("assets/bullets.png");
 
     // Set starting screen
     this->currentScreen = std::unique_ptr<Screen>(new MainScreen(this));

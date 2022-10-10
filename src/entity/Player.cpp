@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #include "../screen/SpaceScreen.hpp"
+#include "Bullet.hpp"
 #include "iostream"
 
 Player::Player(SpaceScreen* context) : Entity(context) {
@@ -12,6 +13,11 @@ void Player::_update() {
 
     if (IsKeyDown(KEY_W)) {
         this->velocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), GetFrameTime()*500));
+    }
+
+    if (IsKeyPressed(KEY_SPACE)) {
+        Vector2 bulletVelocity = Vector2Add(this->velocity, Vector2Scale(Vector2Normalize(playerToMouse), 800));
+        this->context->bullets.push_back(Bullet(this->context, this->position, bulletVelocity, BulletType::NORMAL));
     }
 
 }

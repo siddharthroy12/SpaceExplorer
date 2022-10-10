@@ -20,6 +20,7 @@ public:
 protected:
     SpaceScreen* context;
     float velocityLimit = 500;
+    bool friction = true;
 };
 
 #endif

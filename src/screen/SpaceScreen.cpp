@@ -4,9 +4,43 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 
 #define LAYER_2_CHUNK_SIZE 500
 #define WORLD_SiZE 10000
+
+Playthrough::Playthrough(SpaceScreen* context, int seed) {
+    this->seed = seed;
+    srand(seed);
+
+    // The amount of plants and astroids each start system will have
+    // Planets, astroids
+    int fillAmounts[4][2] = {
+        {3, 4},
+        {4, 5},
+        {5, 6},
+        {6, 7},
+    };
+
+    for (int i = 0; i < 5; i++) {
+        StarSystem starSystem;
+        // Generate planets
+        for (int j = 0; j < fillAmounts[i][0]; j++) {
+            Planet planet;
+            planet.position.x = GetRandomValue((-WORLD_SiZE/2)+200, (WORLD_SiZE/2)-200);
+            planet.position.y = GetRandomValue((-WORLD_SiZE/2)+200, (WORLD_SiZE/2)-200);
+            starSystem.planets.push_back(planet);
+        }
+
+        // Generate astroids
+        for (int j = 0; j < fillAmounts[i][1]; j++) {
+            Astroid astroid(context, {(float)GetRandomValue((-WORLD_SiZE/2)+200, (WORLD_SiZE/2)-200), (float)GetRandomValue((-WORLD_SiZE/2)+200, (WORLD_SiZE/2)-200)}, AstroidSize::BIG);
+            starSystem.astroids.push_back(astroid);
+        }
+
+        this->starSystems.push_back(starSystem);
+    }
+}
 
 Vector2 worldToMap(Vector2 objectPosition, Vector2 playerPosition, bool center) {
     int miniMapSize = (!center) ? MINIMAP_EXPAND_SIZE : MINIMAP_SIZE;
@@ -56,10 +90,26 @@ SpaceScreen::SpaceScreen(Game* context) : Screen(context) {
     this->camera.zoom = 1.3;
     this->camera.rotation = 0;
     DisableCursor();
+
+   this->playthrough = new Playthrough(this, 10);
 }
 
 void SpaceScreen::loop() {
     // Update
+
+    // Limit cursor position
+    if (GetMousePosition().x < 0) {
+        SetMousePosition(0, GetMousePosition().y);
+    }
+    if (GetMousePosition().x > getWindowWidth()) {
+        SetMousePosition(getWindowWidth(), GetMousePosition().y);
+    }
+    if (GetMousePosition().y < 0) {
+        SetMousePosition(GetMousePosition().x, 0);
+    }
+    if (GetMousePosition().y > getWindowHeight()) {
+        SetMousePosition(GetMousePosition().x, getWindowHeight());
+    }
 
     if (IsKeyPressed(KEY_TAB)) {
         this->miniMapExpand = !this->miniMapExpand;
@@ -72,7 +122,6 @@ void SpaceScreen::loop() {
     float cameraSpeed = GetFrameTime() * 6;
     this->camera.target = Vector2Add(this->player->position, Vector2Scale(this->player->velocity, 0.3));
 
-    player->update();
 
     // ---- LAYER 2 ----
     Vector2 layer2Origin = {this->camera.target.x*(float)0.99, this->camera.target.y*(float)0.99};
@@ -106,10 +155,29 @@ void SpaceScreen::loop() {
             std::string key = std::to_string(i) + std::string("|") + std::to_string(j);
 
             if (this->backgrounds.find(key) == this->backgrounds.end()) {
-                this->backgrounds.insert({key, generateBackgroundTextureChunk(i, j, this->seed)});
+                this->backgrounds.insert({key, generateBackgroundTextureChunk(i, j, this->playthrough->seed)});
             }
         }
     }
+
+    // Update in game objects
+    player->update();
+
+    for (auto& bullet : this->bullets) {
+        bullet.update();
+    }
+
+   // Remove dead bullets
+    bullets.erase(
+        std::remove_if(
+            bullets.begin(),
+            bullets.end(),
+            [&](Bullet& bullet) {
+                return bullet.isDead;
+            }
+        ),
+        bullets.end()
+    );
 
     // Draw
     BeginDrawing();
@@ -133,15 +201,47 @@ void SpaceScreen::loop() {
     // Draw boundry
     DrawRectangleLines(-(WORLD_SiZE/2), -(WORLD_SiZE/2), WORLD_SiZE, WORLD_SiZE, WHITE);
 
-    // Draw Planet
-    DrawTexture(this->context->asset.planetEarth, 0, 0, WHITE);
+    // Draw Planets
+    for (auto& planet : this->playthrough->starSystems[this->playthrough->currentStarSystem].planets) {
+        DrawTexturePro(
+            this->context->asset.planetEarth,
+            {
+                .x = 0,
+                .y = 0,
+                .width = (float)this->context->asset.planetEarth.width,
+                .height = (float)this->context->asset.planetEarth.height
+            },
+            {
+                .x = planet.position.x,
+                .y = planet.position.y,
+                .width = (float)this->context->asset.planetEarth.width,
+                .height = (float)this->context->asset.planetEarth.height,
+            },
+            {
+                (float)this->context->asset.planetEarth.width/2,
+                (float)this->context->asset.planetEarth.height/2
+            },
+            0,
+            WHITE
+        );
+    }
+
+    // Draw astroids
+    for (auto& astroid : this->playthrough->starSystems[this->playthrough->currentStarSystem].astroids) {
+        astroid.draw();
+    }
 
     // Draw player
     player->draw();
 
+    for (auto& bullet : this->bullets) {
+        bullet.draw();
+    }
+
     EndMode2D();
 
     // Draw UI
+
     // Draw MiniMap
     int miniMapSize = this->miniMapExpand ? MINIMAP_EXPAND_SIZE : MINIMAP_SIZE;
     Rectangle miniMapRectange = {
@@ -152,9 +252,8 @@ void SpaceScreen::loop() {
     };
     Vector2 centerOfMiniMap = {miniMapRectange.x + miniMapRectange.width/2, miniMapRectange.y + miniMapRectange.height/2};
 
-    // Draw border and background of map
+    // Draw background of map
     DrawRectangleRec(miniMapRectange, {33, 33, 33, 255});
-    DrawRectangleLinesEx(miniMapRectange, 1, WHITE);
 
     // Draw Inside map
     BeginScissorMode(miniMapRectange.x, miniMapRectange.y, miniMapRectange.width, miniMapRectange.height);
@@ -189,11 +288,22 @@ void SpaceScreen::loop() {
         WHITE
     );
 
+    // Draw planets
+    for (auto& planet : this->playthrough->starSystems[this->playthrough->currentStarSystem].planets) {
+        Vector2 planetPosition = worldToMap(planet.position, this->player->position, !this->miniMapExpand);
+        DrawCircleV(planetPosition, 5, GRAY);
+    }
 
-    Vector2 planetPosition = worldToMap({0, 0}, this->player->position, !this->miniMapExpand);
-    DrawCircleV(planetPosition, 5, GRAY);
+    // Draw Astroids
+    for (auto& astroid : this->playthrough->starSystems[this->playthrough->currentStarSystem].astroids) {
+        Vector2 astroidPosition = worldToMap(astroid.position, this->player->position, !this->miniMapExpand);
+        DrawCircleV(astroidPosition, 2, GRAY);
+    }
 
     EndScissorMode();
+
+    // Draw Map border
+    DrawRectangleLinesEx(miniMapRectange, 1, WHITE);
 
     // Draw cursor
     DrawTexturePro(
@@ -223,5 +333,6 @@ void SpaceScreen::loop() {
 
 SpaceScreen::~SpaceScreen() {
     delete this->player;
+    delete this->playthrough;
 }
 
